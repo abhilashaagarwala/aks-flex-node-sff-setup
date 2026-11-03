@@ -10,9 +10,8 @@ Steps to create an AKS cluster with no CNI, join an Arc-enabled edge machine to 
 
 ## Prerequisites
 
-**Edge machine**
-- **Azure Linux 3.0** installed, with a local user that has `sudo` and an SSH key.
-- **Arc-enabled**, so it has a managed identity that step 5 grants access to.
+**[Small form factor (SFF)](https://learn.microsoft.com/en-us/azure/azure-local/small-form-factor/small-form-factor-overview?view=azloc-2606) provisioned machine**
+- Target OS in the **Running** state.
 - **x86-64 (amd64) only.** ARM64 isn't supported yet.
 - **No GPU support.** Flex nodes don't run GPU workloads yet; GPU drivers on the machine aren't used.
 - On a LAN whose range doesn't overlap the ranges under [Address ranges](#address-ranges).
