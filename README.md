@@ -12,9 +12,6 @@ Steps to create an AKS cluster with no CNI, join a provisioned machine to it as 
 
 **[Small form factor (SFF)](https://learn.microsoft.com/en-us/azure/azure-local/small-form-factor/small-form-factor-overview?view=azloc-2606) provisioned machine**
 - Target OS in the **Running** state.
-- **x86-64 (amd64) only.** ARM64 isn't supported yet.
-- **No GPU support.** Flex nodes don't run GPU workloads yet; GPU drivers on the machine aren't used.
-- On a LAN whose range doesn't overlap the ranges under [Address ranges](#address-ranges).
 
 **Azure subscription**
 - Quota for two `Standard_D4s_v5` VMs (8 vCPUs) in the region.
