@@ -3,7 +3,7 @@
 Steps to create an AKS cluster with no CNI, join a provisioned machine to it as a **Flex node**, and connect the two sites with [Unbounded-Net](https://github.com/Azure/unbounded) over a WireGuard gateway.
 
 ```
- Azure VNet (aks-site)                          On-premises LAN (flex-site)
+ Azure VNet (aks-site)                           On-premises LAN (flex-site)
  nodepool1 ── pubgw (public IP, WireGuard) <──── provisioned machine (Flex node)
  pods: 10.83.0.0/16                              pods: 10.85.0.0/16
 ```
@@ -34,7 +34,7 @@ $SUB="<subscription-id>"
 $RG="<resource-group>"
 $AKS="<cluster-name>"
 $LOC="eastus"
-$LAN="<lan-cidr>"                            # LAN the provisioned machine is on, e.g. 192.168.1.0/24
+$LAN="<lan-cidr>"   # LAN the provisioned machine is on, e.g. 192.168.1.0/24
 $ARC_RG="<arc-machine-resource-group>"
 $ARC_NAME="<arc-machine-name>"
 $SSH_USER="<local-user>"
