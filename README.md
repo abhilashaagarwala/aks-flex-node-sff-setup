@@ -27,7 +27,21 @@ $SSH = { param($cmd) az ssh arc -g $ARC_RG -n $ARC_NAME --local-user $SSH_USER -
 az account set -s $SUB
 ```
 
-## 2. Create the cluster and gateway pool
+## 2. Prepare the edge machine
+Turn on SSH through Arc (it takes 30–90 seconds to start working):
+```powershell
+az rest --method put --url "https://management.azure.com$ARC/providers/Microsoft.HybridConnectivity/endpoints/default/serviceConfigurations/SSH?api-version=2023-03-15" --body '{\"properties\":{\"serviceName\":\"SSH\",\"port\":22}}'
+```
+Install the packages the Flex agent needs:
+```powershell
+& $SSH "sudo tdnf install -y nftables systemd-container"
+```
+Open the firewall for pod traffic:
+```powershell
+& $SSH "sudo iptables -P FORWARD ACCEPT && sudo iptables -I INPUT 1 -s $LAN -p udp --dport 6081 -m comment --comment 'unbounded GENEVE intra-site' -j ACCEPT"
+```
+
+## 3. Create the cluster and gateway pool
 Creates the resource group, the VNet, the cluster with no network plugin, and a `pubgw` pool with public IPs that WireGuard can reach.
 ```powershell
 az group create -n $RG -l $LOC -o none
@@ -49,9 +63,9 @@ $NSG = az network nsg list -g $NODE_RG --query "[0].name" -o tsv
 az network nsg rule create -g $NODE_RG --nsg-name $NSG -n AllowUnboundedWireGuard --priority 100 --direction Inbound `
   --access Allow --protocol Udp --source-address-prefixes Internet --source-port-ranges '*' --destination-port-ranges 51820-51899 -o none
 ```
-Nodes show `NotReady` until step 3.
+Nodes show `NotReady` until step 4.
 
-## 3. Set up Unbounded-Net
+## 4. Set up Unbounded-Net
 Installs Unbounded-Net through WSL, using your Windows kubeconfig, then creates the two sites and the gateway.
 ```powershell
 wsl -e bash -c "curl -fsSLo /tmp/ku.tgz https://github.com/Azure/unbounded/releases/download/v0.8.0/kubectl-unbounded-linux-amd64.tar.gz && tar -xzf /tmp/ku.tgz -C /tmp && install -D -m 0755 /tmp/kubectl-unbounded ~/bin/kubectl-unbounded"
@@ -88,35 +102,20 @@ kubectl -n unbounded-system rollout status ds/unbounded-net-node --timeout=5m
 kubectl get nodes -L unbounded-cloud.io/site    # both nodes Ready, in aks-site
 ```
 
-## 4. Give the machine's Arc identity the Flex Node Agent Role
+## 5. Give the machine's Arc identity the Flex Node Agent Role
 ```powershell
 az role assignment create --assignee-object-id (az resource show --ids $ARC --query identity.principalId -o tsv) --assignee-principal-type ServicePrincipal --role "Azure Kubernetes Service Flex Node Agent Role" --scope "/subscriptions/$SUB/resourceGroups/$RG"
 ```
 
-## 5. Enable Arc SSH and prepare the machine
-Turn on SSH through Arc (it takes 30–90 seconds to start working):
-```powershell
-az rest --method put --url "https://management.azure.com$ARC/providers/Microsoft.HybridConnectivity/endpoints/default/serviceConfigurations/SSH?api-version=2023-03-15" --body '{\"properties\":{\"serviceName\":\"SSH\",\"port\":22}}'
-```
-Install the packages the Flex agent needs:
-```powershell
-& $SSH "sudo tdnf install -y nftables systemd-container"
-```
-
-## 6. Add the machine as a Flex node (portal)
+## 6. Add the Flex node pool (portal)
 In the AKS cluster, go to **Node pools → Add → Flex nodes** and create the pool.
 
-## 7. Open the machine's firewall for pod traffic
-Do this **after** the node joins. Onboarding resets the firewall to drop forwarded traffic, and pods on the machine (such as `gantry`) stay not-ready until this runs.
-```powershell
-& $SSH "sudo iptables -P FORWARD ACCEPT && sudo iptables -I INPUT 1 -s $LAN -p udp --dport 6081 -m comment --comment 'unbounded GENEVE intra-site' -j ACCEPT"
-```
-
-## 8. Check it works
+## 7. Check it works
 ```powershell
 kubectl get nodes -L unbounded-cloud.io/site -o wide                   # edge machine Ready, in flex-site
 kubectl get pods -A -o wide | Select-String -NotMatch "Running|Completed"   # nothing listed
 ```
+If a pod on the edge machine (such as `gantry`) stays not-ready, onboarding has reset the firewall. Run the firewall command from step 2 again.
 
 ## Address ranges
 None of these may overlap.
@@ -132,7 +131,7 @@ None of these may overlap.
 Unbounded-Net puts each node in the site whose `nodeCidrs` contains the node's IP, and gives each node a /24 from that site's pod range.
 
 ## Notes
-- **The firewall changes in step 7 don't survive a reboot**, and re-onboarding resets them. Add them to `/etc/sysconfig/iptables` to keep them.
+- **The firewall changes in step 2 don't survive a reboot**, and joining the node to the cluster resets them (see step 7). Add them to `/etc/sysconfig/iptables` to keep them.
 - **UDP 6081 (GENEVE)** carries pod traffic between Flex nodes on the same LAN. The rule matters when the machine's INPUT policy is `DROP`.
-- **Step 4 grants the role on the whole resource group**, so it covers any Flex pool in the cluster. For least privilege, scope it to `.../managedClusters/<cluster>/agentPools/<pool>` once the pool exists.
+- **Step 5 grants the role on the whole resource group**, so it covers any Flex pool in the cluster. For least privilege, scope it to `.../managedClusters/<cluster>/agentPools/<pool>` once the pool exists.
 - Monitoring, Defender, Istio and Gateway API are left out. Add them later with `az aks update`.
