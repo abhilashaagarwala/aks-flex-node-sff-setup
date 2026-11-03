@@ -18,10 +18,15 @@ All commands are PowerShell unless marked otherwise. Run them in one session so 
 
 ## 1. Set variables
 ```powershell
-$SUB="<subscription-id>"; $RG="<resource-group>"; $AKS="<cluster-name>"; $LOC="eastus"
+$SUB="<subscription-id>"
+$RG="<resource-group>"
+$AKS="<cluster-name>"
+$LOC="eastus"
 $LAN="<edge-lan-cidr>"                       # LAN the edge machine is on, e.g. 192.168.1.0/24
-$ARC_RG="<arc-machine-resource-group>"; $ARC_NAME="<arc-machine-name>"
-$SSH_USER="<local-user>"; $SSH_KEY="<path-to-private-key.pem>"
+$ARC_RG="<arc-machine-resource-group>"
+$ARC_NAME="<arc-machine-name>"
+$SSH_USER="<local-user>"
+$SSH_KEY="<path-to-private-key.pem>"
 $ARC="/subscriptions/$SUB/resourceGroups/$ARC_RG/providers/Microsoft.HybridCompute/machines/$ARC_NAME"
 $SSH = { param($cmd) az ssh arc -g $ARC_RG -n $ARC_NAME --local-user $SSH_USER --private-key-file $SSH_KEY -- $cmd }
 az account set -s $SUB
