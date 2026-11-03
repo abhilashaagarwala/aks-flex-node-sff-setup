@@ -104,12 +104,7 @@ Install the packages the Flex agent needs:
 ```
 
 ## 6. Add the machine as a Flex node (portal)
-1. In the AKS cluster, go to **Node pools → Add → Flex nodes** and create the pool.
-2. Add the edge machine to the pool using Arc sign-in.
-3. If the portal gives you an onboarding script instead of running it for you, save it on the machine as `/tmp/onboard.sh` and run it **without the Arc proxy** (on the machine):
-   ```bash
-   sudo env -u HTTPS_PROXY -u https_proxy bash /tmp/onboard.sh
-   ```
+In the AKS cluster, go to **Node pools → Add → Flex nodes** and create the pool.
 
 ## 7. Open the machine's firewall for pod traffic
 Do this **after** the node joins. Onboarding resets the firewall to drop forwarded traffic, and pods on the machine (such as `gantry`) stay not-ready until this runs.
