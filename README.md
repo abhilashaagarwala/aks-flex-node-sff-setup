@@ -1,10 +1,10 @@
-# AKS Flex node on an edge machine with Unbounded-Net
+# AKS Flex node on a provisioned machine with Unbounded-Net
 
-Steps to create an AKS cluster with no CNI, join an Arc-enabled edge machine to it as a **Flex node**, and connect the two sites with [Unbounded-Net](https://github.com/Azure/unbounded) over a WireGuard gateway.
+Steps to create an AKS cluster with no CNI, join a provisioned machine to it as a **Flex node**, and connect the two sites with [Unbounded-Net](https://github.com/Azure/unbounded) over a WireGuard gateway.
 
 ```
- Azure VNet (aks-site)                          Edge LAN (flex-site)
- nodepool1 ── pubgw (public IP, WireGuard) <──── edge machine (Flex node)
+ Azure VNet (aks-site)                          On-premises LAN (flex-site)
+ nodepool1 ── pubgw (public IP, WireGuard) <──── provisioned machine (Flex node)
  pods: 10.83.0.0/16                              pods: 10.85.0.0/16
 ```
 
@@ -37,7 +37,7 @@ $SUB="<subscription-id>"
 $RG="<resource-group>"
 $AKS="<cluster-name>"
 $LOC="eastus"
-$LAN="<edge-lan-cidr>"                       # LAN the edge machine is on, e.g. 192.168.1.0/24
+$LAN="<lan-cidr>"                            # LAN the provisioned machine is on, e.g. 192.168.1.0/24
 $ARC_RG="<arc-machine-resource-group>"
 $ARC_NAME="<arc-machine-name>"
 $SSH_USER="<local-user>"
@@ -47,7 +47,7 @@ $SSH = { param($cmd) az ssh arc -g $ARC_RG -n $ARC_NAME --local-user $SSH_USER -
 az account set -s $SUB
 ```
 
-## 2. Prepare the edge machine
+## 2. Prepare the provisioned machine
 Turn on SSH through Arc (it takes 30–90 seconds to start working):
 ```powershell
 az rest --method put --url "https://management.azure.com$ARC/providers/Microsoft.HybridConnectivity/endpoints/default/serviceConfigurations/SSH?api-version=2023-03-15" --body '{\"properties\":{\"serviceName\":\"SSH\",\"port\":22}}'
@@ -132,10 +132,10 @@ In the AKS cluster, go to **Node pools → Add → Flex nodes** and create the p
 
 ## 7. Check it works
 ```powershell
-kubectl get nodes -L unbounded-cloud.io/site -o wide                   # edge machine Ready, in flex-site
+kubectl get nodes -L unbounded-cloud.io/site -o wide                   # provisioned machine Ready, in flex-site
 kubectl get pods -A -o wide | Select-String -NotMatch "Running|Completed"   # nothing listed
 ```
-If a pod on the edge machine (such as `gantry`) stays not-ready, onboarding has reset the firewall. Run the firewall command from step 2 again.
+If a pod on the provisioned machine (such as `gantry`) stays not-ready, onboarding has reset the firewall. Run the firewall command from step 2 again.
 
 ## Address ranges
 None of these may overlap.
@@ -145,7 +145,7 @@ None of these may overlap.
 | 10.81.0.0/16 | AKS VNet; nodes in `aks-site` |
 | 10.83.0.0/16 | Pods on AKS nodes |
 | 10.84.0.0/16 | Kubernetes services |
-| `$LAN` | Edge LAN; nodes in `flex-site` |
+| `$LAN` | On-premises LAN; nodes in `flex-site` |
 | 10.85.0.0/16 | Pods on Flex nodes |
 
 Unbounded-Net puts each node in the site whose `nodeCidrs` contains the node's IP, and gives each node a /24 from that site's pod range.
