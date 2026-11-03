@@ -9,10 +9,26 @@ Steps to create an AKS cluster with no CNI, join an Arc-enabled edge machine to 
 ```
 
 ## Prerequisites
+
+**Edge machine**
+- **Azure Linux 3.0** installed, with a local user that has `sudo` and an SSH key.
+- **Arc-enabled**, so it has a managed identity that step 5 grants access to.
+- **x86-64 (amd64) only.** ARM64 isn't supported yet.
+- **No GPU support.** Flex nodes don't run GPU workloads yet; GPU drivers on the machine aren't used.
+- On a LAN whose range doesn't overlap the ranges under [Address ranges](#address-ranges).
+
+**Azure subscription**
+- Quota for two `Standard_D4s_v5` VMs (8 vCPUs) in the region.
+- The Flex node preview features registered. Registration can take several minutes, so check that both show `Registered` before step 3:
+  ```powershell
+  az feature register --namespace Microsoft.ContainerService --name AKSFlexNodePreview
+  az feature register --namespace Microsoft.ContainerService --name PutMachinePreview
+  az feature list --query "[?contains(name,'AKSFlexNodePreview') || contains(name,'PutMachinePreview')].{name:name,state:properties.state}" -o table
+  az provider register --namespace Microsoft.ContainerService
+  ```
+
+**Your workstation**
 - Windows with Azure CLI, `kubectl` and WSL (Ubuntu). `kubectl-unbounded` has no Windows build.
-- Preview features `AKSFlexNodePreview` and `PutMachinePreview` registered on the subscription.
-- An Arc-enabled Azure Linux edge machine, with an SSH key for a local sudo user.
-- Quota for two `Standard_D4s_v5` VMs (8 vCPUs).
 
 All commands are PowerShell unless marked otherwise. Run them in one session so the variables carry over.
 
